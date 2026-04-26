@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { AllSettings, SmartColumn } from './types'
 
 interface FilterPillsProps<T> {
@@ -13,6 +14,7 @@ export function FilterPills<T>({
   smartColumns,
   updateSettings,
 }: FilterPillsProps<T>) {
+  const { t } = useTranslation('common', { keyPrefix: 'smartTable' })
   const clearAllFilters = () => updateSettings({})
 
   // O(1) column lookup instead of O(n) find per pill
@@ -25,22 +27,22 @@ export function FilterPills<T>({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-        Filtres actifs
+        {t('activeFilters')}
       </span>
       {Object.entries(allSettings).map(([colId, s]) => {
         const col = colMap.get(colId)
         if (!col) return null
         const parts: string[] = []
-        if (s.sort) parts.push(`Trier ${s.sort === 'asc' ? '↑' : '↓'}`)
+        if (s.sort) parts.push(`${t('sort.label')} ${s.sort === 'asc' ? '↑' : '↓'}`)
         if (s.filterText) parts.push(`"${s.filterText}"`)
         if (s.filterValues && s.filterValues.length > 0)
-          parts.push(`${s.filterValues.length} valeurs`)
-        if (s.filterDateFrom && s.filterDateTo) parts.push(`${s.filterDateFrom} → ${s.filterDateTo}`)
-        else if (s.filterDateFrom) parts.push(`à partir de ${s.filterDateFrom}`)
-        else if (s.filterDateTo) parts.push(`jusqu'à ${s.filterDateTo}`)
-        if (s.filterTimeFrom && s.filterTimeTo) parts.push(`${s.filterTimeFrom} → ${s.filterTimeTo}`)
-        else if (s.filterTimeFrom) parts.push(`à partir de ${s.filterTimeFrom}`)
-        else if (s.filterTimeTo) parts.push(`jusqu'à ${s.filterTimeTo}`)
+          parts.push(t('filterCount', { count: s.filterValues.length }))
+        if (s.filterDateFrom && s.filterDateTo) parts.push(t('filterRange', { from: s.filterDateFrom, to: s.filterDateTo }))
+        else if (s.filterDateFrom) parts.push(t('filterFrom', { date: s.filterDateFrom }))
+        else if (s.filterDateTo) parts.push(t('filterUntil', { date: s.filterDateTo }))
+        if (s.filterTimeFrom && s.filterTimeTo) parts.push(t('filterRange', { from: s.filterTimeFrom, to: s.filterTimeTo }))
+        else if (s.filterTimeFrom) parts.push(t('filterFrom', { date: s.filterTimeFrom }))
+        else if (s.filterTimeTo) parts.push(t('filterUntil', { date: s.filterTimeTo }))
         if (parts.length === 0) return null
         return (
           <span
@@ -65,7 +67,7 @@ export function FilterPills<T>({
         onClick={clearAllFilters}
         className="text-xs text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-300"
       >
-        Tout effacer
+        {t('clearAll')}
       </button>
     </div>
   )

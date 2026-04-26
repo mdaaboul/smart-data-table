@@ -1,5 +1,6 @@
 import { clsx } from 'clsx'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowDownToLine } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 const SCROLL_MODE_KEY = 'smartdt-scroll-mode'
 
@@ -34,6 +35,7 @@ export function SmartPagination({
   showScrollToggle,
   onScrollModeChange,
 }: SmartPaginationProps) {
+  const { t } = useTranslation('common', { keyPrefix: 'smartTable' })
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const from = Math.min((page - 1) * pageSize + 1, total)
   const to = Math.min(page * pageSize, total)
@@ -58,7 +60,7 @@ export function SmartPagination({
       {/* Range + page size */}
       <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
         <span>
-          {from}–{to} sur {total}
+          {t('pagination.rangeOf', { from, to, total })}
         </span>
         <select
           value={pageSize}
@@ -67,7 +69,7 @@ export function SmartPagination({
         >
           {PAGE_SIZE_OPTIONS.map((s) => (
             <option key={s} value={s}>
-              {s} par page
+              {t('pagination.perPage', { count: s })}
             </option>
           ))}
         </select>
@@ -75,10 +77,10 @@ export function SmartPagination({
           <button
             onClick={() => { setScrollMode('infinite'); onScrollModeChange?.('infinite') }}
             className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800 rounded-lg transition-colors"
-            title="Passer en défilement infini"
+            title={t('pagination.infiniteScrollHint')}
           >
             <ArrowDownToLine className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Défilement infini</span>
+            <span className="hidden sm:inline">{t('pagination.infiniteScroll')}</span>
           </button>
         )}
       </div>
@@ -89,14 +91,14 @@ export function SmartPagination({
           <NavButton
             onClick={() => onPageChange(1)}
             disabled={page === 1}
-            label="Première"
+            label={t('pagination.firstPage')}
           >
             <ChevronsLeft className="h-4 w-4" />
           </NavButton>
           <NavButton
             onClick={() => onPageChange(page - 1)}
             disabled={page === 1}
-            label="Précédent"
+            label={t('pagination.previousPage')}
           >
             <ChevronLeft className="h-4 w-4" />
           </NavButton>
@@ -125,14 +127,14 @@ export function SmartPagination({
           <NavButton
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages}
-            label="Suivant"
+            label={t('pagination.nextPage')}
           >
             <ChevronRight className="h-4 w-4" />
           </NavButton>
           <NavButton
             onClick={() => onPageChange(totalPages)}
             disabled={page >= totalPages}
-            label="Dernière"
+            label={t('pagination.lastPage')}
           >
             <ChevronsRight className="h-4 w-4" />
           </NavButton>

@@ -1,0 +1,187 @@
+{
+  "search": "Rechercher...",
+  "searchColumn": "Rechercher une colonne...",
+  "clear": "Effacer",
+  "clearSearch": "Effacer la recherche",
+  "clearAll": "Tout effacer",
+  "clearDates": "Effacer les dates",
+  "close": "Fermer (Échap)",
+  "closeSimple": "Fermer",
+  "noResults": "Aucun résultat",
+  "noMatchingValues": "Aucune valeur correspondante",
+  "noHiddenColumns": "Aucune colonne masquée",
+  "items": "éléments",
+  "value": "Valeur",
+  "remove": "Supprimer",
+  "custom": "Personnalisé",
+  "switchBackToPagination": "Repasser en pagination",
+  "scrollUp": "Remonter",
+  "activeFilters": "Filtres actifs",
+  "activeFiltersTitle": "Filtres actifs",
+  "addLabel": "Ajouter",
+  "addColumnNext": "Ajouter une colonne à côté",
+  "filterCount": "{{count}} valeurs",
+  "filterFrom": "à partir de {{date}}",
+  "filterUntil": "jusqu'à {{date}}",
+  "filterGreaterEqual": ">= {{value}}",
+  "filterLessEqual": "<= {{value}}",
+  "filterRange": "{{from}} -> {{to}}",
+  "selection": {
+    "selected": "{{count}} sélectionné(s)",
+    "selectAll": "Tout sélectionner",
+    "selectAllCount": "Tout sélectionner ({{count}})",
+    "selectAllItems": "Sélectionner les {{count}} éléments",
+    "selectAllAriaLabel": "Tout sélectionner",
+    "selectRowAriaLabel": "Sélectionner",
+    "deselect": "Désélectionner",
+    "deselectAll": "Tout désélectionner",
+    "allPages": "(toutes les pages)"
+  },
+  "table": {
+    "ariaLabel": "Tableau de données",
+    "selectAllAria": "Tout sélectionner",
+    "headerSortHint": "Clic pour trier, clic droit ou chevron pour filtrer/styler",
+    "columnOptions": "Options de colonne",
+    "filterAggregateStyle": "Filtrer, agréger, styliser…",
+    "customizeColumns": "Personnaliser les colonnes",
+    "fitToWidth": "Ajuster à la largeur",
+    "columns": "Colonnes"
+  },
+  "pagination": {
+    "rangeOf": "{{from}}–{{to}} sur {{total}}",
+    "perPage": "{{count}} par page",
+    "infiniteScroll": "Défilement infini",
+    "infiniteScrollHint": "Passer en défilement infini",
+    "firstPage": "Première",
+    "previousPage": "Précédent",
+    "nextPage": "Suivant",
+    "lastPage": "Dernière"
+  },
+  "export": {
+    "button": "Exporter",
+    "csv": "Exporter en CSV",
+    "excel": "Exporter en Excel"
+  },
+  "sort": {
+    "title": "Trier",
+    "ascending": "Croissant",
+    "descending": "Décroissant",
+    "azc": "A → Z",
+    "azd": "Z → A",
+    "label": "Trier"
+  },
+  "filter": {
+    "title": "Filtrer",
+    "from": "De",
+    "to": "À",
+    "min": "Min",
+    "max": "Max"
+  },
+  "textOp": {
+    "contains": "Contient",
+    "equals": "Est exactement",
+    "starts": "Commence par",
+    "ends": "Finit par",
+    "empty": "Est vide",
+    "notEmpty": "N'est pas vide",
+    "containsPlaceholder": "Contient…",
+    "equalsPlaceholder": "Valeur exacte",
+    "startsPlaceholder": "Commence par…",
+    "endsPlaceholder": "Finit par…"
+  },
+  "numOp": {
+    "between": "Entre",
+    "eq": "=",
+    "neq": "≠",
+    "gt": ">",
+    "gte": "≥",
+    "lt": "<",
+    "lte": "≤",
+    "empty": "Est vide",
+    "notEmpty": "N'est pas vide"
+  },
+  "datePresets": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "last7Days": "7 derniers jours",
+    "last30Days": "30 derniers jours",
+    "thisMonth": "Ce mois",
+    "lastMonth": "Mois dernier",
+    "thisYear": "Cette année",
+    "lastYear": "L'année dernière"
+  },
+  "checkbox": {
+    "all": "Tous",
+    "none": "Aucun",
+    "valuesCount": "{{count}} valeurs"
+  },
+  "footer": {
+    "title": "Pied de colonne",
+    "none": "Aucun",
+    "computedHint": "Calcul effectué sur {{loaded}} ligne(s) chargée(s) sur {{total}} au total. Augmentez la taille de page pour inclure plus de lignes."
+  },
+  "agg": {
+    "sum": "Somme",
+    "count": "Total",
+    "min": "Min",
+    "max": "Max",
+    "avg": "Moyenne"
+  },
+  "appearance": {
+    "title": "Apparence",
+    "borderLeft": "Bordure gauche",
+    "borderRight": "Bordure droite",
+    "background": "Fond",
+    "borderWidth": "Épaisseur bordure",
+    "thin": "Fin",
+    "medium": "Moyen",
+    "thick": "Épais",
+    "weight": "Épaisseur",
+    "light": "Léger",
+    "normal": "Normal",
+    "bold": "Gras",
+    "heavy": "Épais",
+    "style": "Style",
+    "italic": "Italique",
+    "size": "Taille",
+    "alignment": "Alignement",
+    "sampleText": "Texte d'exemple"
+  },
+  "column": {
+    "label": "Colonne",
+    "reset": "Réinitialiser",
+    "hide": "Masquer colonne",
+    "hideTooltip": "Masquer cette colonne dans la vue courante",
+    "hideQuoted": "Masquer \"{{header}}\""
+  },
+  "designer": {
+    "open": "Personnaliser l'affichage",
+    "title": "Configurer l'affichage",
+    "preview": "Aperçu",
+    "mainLine": "Ligne principale",
+    "subLine": "Sous-titre",
+    "optional": "optionnel",
+    "clickToInsert": "Cliquer pour insérer un champ",
+    "sortBy": "Trier par",
+    "default": "Par défaut",
+    "resetDefaults": "Réinitialiser par défaut",
+    "mainPlaceholder": "{reference} — {typeBien}",
+    "subPlaceholder": "{adresse}"
+  },
+  "context": {
+    "copyCell": "Copier la cellule",
+    "copyRow": "Copier la ligne",
+    "openRow": "Ouvrir la ligne",
+    "hideQuoted": "Masquer \"{{header}}\"",
+    "empty": "vide"
+  },
+  "format": {
+    "yes": "Oui",
+    "no": "Non",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "daysAgo": "Il y a {{count}} j",
+    "monthsAgo": "Il y a {{count}} mois",
+    "yearsAgo": "Il y a {{count}} an(s)"
+  }
+}

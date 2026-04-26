@@ -3,6 +3,16 @@ import { saveAs } from 'file-saver'
 import type { FilterFn } from '@tanstack/react-table'
 import type { ColumnStyle, AggFn, SmartColumn, AllSettings } from './types'
 
+// ─── i18n ──────────────────────────────────────────────────
+//
+// Helpers that need translated strings accept a `t` function as a
+// parameter. This keeps helpers.ts free of React/hooks (it must stay
+// importable from non-component code) while still letting consumers
+// resolve `smartTable.*` keys against their i18n instance.
+//
+// Use the typed `TFn` alias below to keep call signatures concise.
+export type TFn = (key: string, options?: Record<string, unknown>) => string
+
 // ─── Color palette ──────────────────────────────────────────
 
 export const SWATCH_COLORS = [
@@ -214,18 +224,18 @@ export function formatValue(value: unknown, format?: string): string {
     ? (typeof value === 'number' ? value : typeof value === 'string' ? parseFloat(value) : NaN)
     : NaN
   if (format === 'currency' && !isNaN(num)) {
-    return num.toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' €'
+    return num.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' €'
   }
   if (format === 'surface' && !isNaN(num)) {
-    return num.toLocaleString('fr-FR') + ' m²'
+    return num.toLocaleString('en-US') + ' m²'
   }
   if (format === 'date' && typeof value === 'string') {
     try {
-      return new Date(value).toLocaleDateString('fr-FR')
+      return new Date(value).toLocaleDateString('en-US')
     } catch { return value }
   }
   if (format === 'boolean') {
-    return value ? 'Oui' : 'Non'
+    return value ? 'Yes' : 'No' // Note: callers needing i18n-aware boolean should use formatBoolean(value, t)
   }
   if (format === 'duration' && !isNaN(num)) {
     if (num >= 60) {
@@ -319,12 +329,23 @@ export function templateHasImageVar(
 
 // ─── Aggregation helpers ──────────────────────────────────
 
+/**
+ * @deprecated Use `getAggLabel(fn, t)` instead. This map ships English
+ * labels only and is kept for back-compat with consumers that haven't
+ * migrated to the i18n flow. New code should always go through
+ * `getAggLabel` so labels are translated via the consumer's i18n instance.
+ */
 export const AGG_LABELS: Record<AggFn, string> = {
-  sum: 'Somme',
+  sum: 'Sum',
   count: 'Total',
   min: 'Min',
   max: 'Max',
-  avg: 'Moyenne',
+  avg: 'Avg',
+}
+
+/** Resolve the localized label for an aggregation function. */
+export function getAggLabel(fn: AggFn, t: TFn): string {
+  return t(`agg.${fn}`)
 }
 
 /** Which aggregation functions are valid for each column type */
@@ -392,8 +413,13 @@ export function computeAggregations<T>(
 /**
  * Extended field value formatter for SmartCard.
  * Supports all base formats plus date-relative and percentage.
+ *
+ * @param t Optional translation function. When provided, `date-relative`
+ * uses translated labels ("Today" / "Aujourd'hui", "Hier", etc.). Without
+ * it, English fallbacks are returned to keep the helper safe to call from
+ * non-component contexts.
  */
-export function formatFieldValue(value: unknown, format?: string): string {
+export function formatFieldValue(value: unknown, format?: string, t?: TFn): string {
   if (value == null) return ''
   // Extended formats
   if (format === 'date-relative' && typeof value === 'string') {
@@ -402,19 +428,20 @@ export function formatFieldValue(value: unknown, format?: string): string {
       const now = new Date()
       const diffMs = now.getTime() - d.getTime()
       const diffDays = Math.floor(diffMs / 86_400_000)
-      if (diffDays === 0) return "Aujourd'hui"
-      if (diffDays === 1) return 'Hier'
-      if (diffDays < 30) return `Il y a ${diffDays} j`
-      if (diffDays < 365) return `Il y a ${Math.floor(diffDays / 30)} mois`
-      return `Il y a ${Math.floor(diffDays / 365)} an${Math.floor(diffDays / 365) > 1 ? 's' : ''}`
+      if (diffDays === 0) return t ? t('format.today') : 'Today'
+      if (diffDays === 1) return t ? t('format.yesterday') : 'Yesterday'
+      if (diffDays < 30) return t ? t('format.daysAgo', { count: diffDays }) : `${diffDays}d ago`
+      if (diffDays < 365) return t ? t('format.monthsAgo', { count: Math.floor(diffDays / 30) }) : `${Math.floor(diffDays / 30)}mo ago`
+      const years = Math.floor(diffDays / 365)
+      return t ? t('format.yearsAgo', { count: years }) : `${years}y ago`
     } catch { return String(value) }
   }
   if (format === 'date-absolute' && typeof value === 'string') {
-    try { return new Date(value).toLocaleDateString('fr-FR') } catch { return value }
+    try { return new Date(value).toLocaleDateString('en-US') } catch { return value }
   }
   if (format === 'percentage') {
     const n = typeof value === 'number' ? value : parseFloat(String(value))
-    if (!isNaN(n)) return n.toLocaleString('fr-FR') + ' %'
+    if (!isNaN(n)) return n.toLocaleString('en-US') + ' %'
   }
   // Delegate to base formatter
   return formatValue(value, format)

@@ -1,11 +1,30 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import type { AllSettings, ColumnSettings, ViewMode, SmartColumn, TableStateSnapshot } from './types'
+import type { AllSettings, ColumnSettings, ViewMode, SmartColumn, TableStateSnapshot, PrefsAPI } from './types'
 
-// ─── Preferences interface (injected from useUIPreferences) ─
+// Re-export so existing imports from './useTableState' keep working.
+export type { PrefsAPI } from './types'
 
-export interface PrefsAPI {
-  get<T>(key: string, fallback: T): T
-  set(key: string, value: unknown): void
+// ─── Default localStorage adapter ──────────────────────────
+//
+// Consumers that don't want to wire their own persistence can
+// `createLocalStoragePrefs()` and pass the result as the `prefs`
+// prop on SmartDataTable.
+export function createLocalStoragePrefs(): PrefsAPI {
+  return {
+    get<T>(key: string, fallback: T): T {
+      try {
+        const raw = localStorage.getItem(key)
+        return raw == null ? fallback : (JSON.parse(raw) as T)
+      } catch {
+        return fallback
+      }
+    },
+    set(key: string, value: unknown): void {
+      try {
+        localStorage.setItem(key, JSON.stringify(value))
+      } catch { /* swallow quota / privacy-mode errors */ }
+    },
+  }
 }
 
 // ─── Hook ───────────────────────────────────────────────────

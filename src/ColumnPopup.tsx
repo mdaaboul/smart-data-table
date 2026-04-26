@@ -5,11 +5,18 @@ import {
   Home, X, RotateCcw, EyeOff, Plus,
 } from 'lucide-react'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
 import type { SmartColumn, ColumnSettings, ColumnStyle, AggFn, TextFilterOp, NumberFilterOp } from './types'
 import { ColumnStyler } from './ColumnStyler'
-import { DatePicker } from '../DatePicker'
-import { ENTITY_VARIABLES, DEFAULT_TEMPLATES, type EntityVar } from './entityVariables'
-import { resolveTemplate, extractImageUrl, templateHasImageVar, allowedAggFns, AGG_LABELS } from './helpers'
+import { resolveTemplate, extractImageUrl, templateHasImageVar, allowedAggFns, getAggLabel } from './helpers'
+
+type TFn = (key: string, options?: Record<string, unknown>) => string
+
+// ENTITY_VARIABLES / DEFAULT_TEMPLATES intentionally stubbed —
+// entity-metadata system is out of scope for the package.
+type EntityVar = { key: string; label: string; group: string; format?: string }
+const ENTITY_VARIABLES: Record<string, EntityVar[]> = {}
+const DEFAULT_TEMPLATES: Record<string, { mainLine: string; subLine?: string; sortField?: string }> = {}
 
 // ─── Airtable-like apply-on-change popup ────────────────────
 //
@@ -69,67 +76,69 @@ function toIsoDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-const DATE_PRESETS: DatePreset[] = [
-  {
-    label: "Aujourd'hui",
-    compute: () => { const t = toIsoDate(new Date()); return { from: t, to: t } },
-  },
-  {
-    label: 'Hier',
-    compute: () => {
-      const d = new Date(); d.setDate(d.getDate() - 1)
-      const s = toIsoDate(d); return { from: s, to: s }
+function buildDatePresets(t: TFn): DatePreset[] {
+  return [
+    {
+      label: t('datePresets.today'),
+      compute: () => { const s = toIsoDate(new Date()); return { from: s, to: s } },
     },
-  },
-  {
-    label: '7 derniers jours',
-    compute: () => {
-      const to = new Date()
-      const from = new Date(); from.setDate(from.getDate() - 6)
-      return { from: toIsoDate(from), to: toIsoDate(to) }
+    {
+      label: t('datePresets.yesterday'),
+      compute: () => {
+        const d = new Date(); d.setDate(d.getDate() - 1)
+        const s = toIsoDate(d); return { from: s, to: s }
+      },
     },
-  },
-  {
-    label: '30 derniers jours',
-    compute: () => {
-      const to = new Date()
-      const from = new Date(); from.setDate(from.getDate() - 29)
-      return { from: toIsoDate(from), to: toIsoDate(to) }
+    {
+      label: t('datePresets.last7Days'),
+      compute: () => {
+        const to = new Date()
+        const from = new Date(); from.setDate(from.getDate() - 6)
+        return { from: toIsoDate(from), to: toIsoDate(to) }
+      },
     },
-  },
-  {
-    label: 'Ce mois',
-    compute: () => {
-      const now = new Date()
-      const from = new Date(now.getFullYear(), now.getMonth(), 1)
-      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-      return { from: toIsoDate(from), to: toIsoDate(to) }
+    {
+      label: t('datePresets.last30Days'),
+      compute: () => {
+        const to = new Date()
+        const from = new Date(); from.setDate(from.getDate() - 29)
+        return { from: toIsoDate(from), to: toIsoDate(to) }
+      },
     },
-  },
-  {
-    label: 'Mois dernier',
-    compute: () => {
-      const now = new Date()
-      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-      const to = new Date(now.getFullYear(), now.getMonth(), 0)
-      return { from: toIsoDate(from), to: toIsoDate(to) }
+    {
+      label: t('datePresets.thisMonth'),
+      compute: () => {
+        const now = new Date()
+        const from = new Date(now.getFullYear(), now.getMonth(), 1)
+        const to = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+        return { from: toIsoDate(from), to: toIsoDate(to) }
+      },
     },
-  },
-  {
-    label: 'Cette année',
-    compute: () => {
-      const y = new Date().getFullYear()
-      return { from: `${y}-01-01`, to: `${y}-12-31` }
+    {
+      label: t('datePresets.lastMonth'),
+      compute: () => {
+        const now = new Date()
+        const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        const to = new Date(now.getFullYear(), now.getMonth(), 0)
+        return { from: toIsoDate(from), to: toIsoDate(to) }
+      },
     },
-  },
-  {
-    label: "L'année dernière",
-    compute: () => {
-      const y = new Date().getFullYear() - 1
-      return { from: `${y}-01-01`, to: `${y}-12-31` }
+    {
+      label: t('datePresets.thisYear'),
+      compute: () => {
+        const y = new Date().getFullYear()
+        return { from: `${y}-01-01`, to: `${y}-12-31` }
+      },
     },
-  },
-]
+    {
+      label: t('datePresets.lastYear'),
+      compute: () => {
+        const y = new Date().getFullYear() - 1
+        return { from: `${y}-01-01`, to: `${y}-12-31` }
+      },
+    },
+  ]
+}
 
 // Détecte si un champ ressemble à une date. Match ISO (YYYY-MM-DD), locale
 // française (DD/MM/YYYY), ou Date valide. Seuil 70% pour tolérer quelques
@@ -186,6 +195,8 @@ export function ColumnPopup<T>({
   sampleEntity,
   onEntityConfigSave,
 }: ColumnPopupProps<T>) {
+  const { t } = useTranslation('common', { keyPrefix: 'smartTable' })
+  const datePresets = useMemo(() => buildDatePresets(t), [t])
   const [addColumnOpen, setAddColumnOpen] = useState(false)
   const [addColumnSearch, setAddColumnSearch] = useState('')
   const [sort, setSort] = useState<'asc' | 'desc' | null>(currentSettings.sort ?? null)
@@ -440,24 +451,24 @@ export function ColumnPopup<T>({
   }
 
   const TEXT_OP_OPTIONS: { value: TextFilterOp; label: string }[] = [
-    { value: 'contains', label: 'Contient' },
-    { value: 'equals', label: 'Est exactement' },
-    { value: 'starts', label: 'Commence par' },
-    { value: 'ends', label: 'Finit par' },
-    { value: 'empty', label: 'Est vide' },
-    { value: 'notEmpty', label: "N'est pas vide" },
+    { value: 'contains', label: t('textOp.contains') },
+    { value: 'equals', label: t('textOp.equals') },
+    { value: 'starts', label: t('textOp.starts') },
+    { value: 'ends', label: t('textOp.ends') },
+    { value: 'empty', label: t('textOp.empty') },
+    { value: 'notEmpty', label: t('textOp.notEmpty') },
   ]
 
   const NUM_OP_OPTIONS: { value: NumberFilterOp; label: string }[] = [
-    { value: 'between', label: 'Entre' },
-    { value: 'eq', label: '=' },
-    { value: 'neq', label: '≠' },
-    { value: 'gt', label: '>' },
-    { value: 'gte', label: '≥' },
-    { value: 'lt', label: '<' },
-    { value: 'lte', label: '≤' },
-    { value: 'empty', label: 'Est vide' },
-    { value: 'notEmpty', label: "N'est pas vide" },
+    { value: 'between', label: t('numOp.between') },
+    { value: 'eq', label: t('numOp.eq') },
+    { value: 'neq', label: t('numOp.neq') },
+    { value: 'gt', label: t('numOp.gt') },
+    { value: 'gte', label: t('numOp.gte') },
+    { value: 'lt', label: t('numOp.lt') },
+    { value: 'lte', label: t('numOp.lte') },
+    { value: 'empty', label: t('numOp.empty') },
+    { value: 'notEmpty', label: t('numOp.notEmpty') },
   ]
 
   const applyPreset = (p: DatePreset) => {
@@ -483,13 +494,13 @@ export function ColumnPopup<T>({
       {/* ── Header avec nom de colonne + X fermer ── */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-slate-700">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Colonne</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{t('column.label')}</p>
           <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{column.header}</p>
         </div>
         <button
           onClick={onClose}
           className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-          title="Fermer (Esc)"
+          title={t('close')}
         >
           <X className="h-4 w-4" />
         </button>
@@ -498,7 +509,7 @@ export function ColumnPopup<T>({
       {/* Sort */}
       {(column.sortable ?? true) && (
         <div className="px-4 py-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Trier</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">{t('sort.title')}</p>
           <div className="flex gap-2">
             <button
               onClick={() => setSort(sort === 'asc' ? null : 'asc')}
@@ -510,7 +521,7 @@ export function ColumnPopup<T>({
               )}
             >
               {isNumberColumn ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowUpAZ className="h-3.5 w-3.5" />}
-              {isNumberColumn ? 'Croissant' : 'A → Z'}
+              {isNumberColumn ? t('sort.ascending') : t('sort.azc')}
             </button>
             <button
               onClick={() => setSort(sort === 'desc' ? null : 'desc')}
@@ -522,7 +533,7 @@ export function ColumnPopup<T>({
               )}
             >
               {isNumberColumn ? <ArrowDown className="h-3.5 w-3.5" /> : <ArrowDownAZ className="h-3.5 w-3.5" />}
-              {isNumberColumn ? 'Décroissant' : 'Z → A'}
+              {isNumberColumn ? t('sort.descending') : t('sort.azd')}
             </button>
           </div>
         </div>
@@ -530,12 +541,12 @@ export function ColumnPopup<T>({
 
       {/* Filter */}
       {(column.filterable ?? true) && (
-        <Accordion title="Filtrer" icon={<Filter className="h-4 w-4" />} defaultOpen>
+        <Accordion title={t('filter.title')} icon={<Filter className="h-4 w-4" />} defaultOpen>
           {isDateColumn ? (
             <div className="space-y-2 mb-2">
               {/* Presets rapides */}
               <div className="flex flex-wrap gap-1">
-                {DATE_PRESETS.map((p) => (
+                {datePresets.map((p) => (
                   <button
                     key={p.label}
                     onClick={() => applyPreset(p)}
@@ -546,15 +557,25 @@ export function ColumnPopup<T>({
                 ))}
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">De</label>
+                <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">{t('filter.from')}</label>
                 <div className="flex-1">
-                  <DatePicker value={filterDateFrom} onChange={setFilterDateFrom} />
+                  <input
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={(e) => setFilterDateFrom(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-slate-800 dark:text-white dark:border-slate-600"
+                  />
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">À</label>
+                <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">{t('filter.to')}</label>
                 <div className="flex-1">
-                  <DatePicker value={filterDateTo} onChange={setFilterDateTo} />
+                  <input
+                    type="date"
+                    value={filterDateTo}
+                    onChange={(e) => setFilterDateTo(e.target.value)}
+                    className="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-slate-800 dark:text-white dark:border-slate-600"
+                  />
                 </div>
               </div>
               {(filterDateFrom || filterDateTo) && (
@@ -562,14 +583,14 @@ export function ColumnPopup<T>({
                   onClick={() => { setFilterDateFrom(''); setFilterDateTo('') }}
                   className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                 >
-                  Effacer les dates
+                  {t('clearDates')}
                 </button>
               )}
             </div>
           ) : isTimeColumn ? (
             <div className="space-y-2 mb-2">
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">De</label>
+                <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">{t('filter.from')}</label>
                 <input
                   type="time"
                   value={filterTimeFrom}
@@ -578,7 +599,7 @@ export function ColumnPopup<T>({
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">À</label>
+                <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">{t('filter.to')}</label>
                 <input
                   type="time"
                   value={filterTimeTo}
@@ -601,24 +622,24 @@ export function ColumnPopup<T>({
                 filterNumberOp === 'between' ? (
                   <>
                     <div className="flex items-center gap-2">
-                      <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">Min</label>
+                      <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">{t('filter.min')}</label>
                       <input
                         type="number"
                         inputMode="decimal"
                         value={filterNumberFrom}
                         onChange={(e) => setFilterNumberFrom(e.target.value)}
-                        placeholder="Min"
+                        placeholder={t('filter.min')}
                         className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">Max</label>
+                      <label className="text-xs text-slate-500 dark:text-slate-400 w-8 shrink-0">{t('filter.max')}</label>
                       <input
                         type="number"
                         inputMode="decimal"
                         value={filterNumberTo}
                         onChange={(e) => setFilterNumberTo(e.target.value)}
-                        placeholder="Max"
+                        placeholder={t('filter.max')}
                         className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                       />
                     </div>
@@ -629,7 +650,7 @@ export function ColumnPopup<T>({
                     inputMode="decimal"
                     value={filterNumberFrom}
                     onChange={(e) => setFilterNumberFrom(e.target.value)}
-                    placeholder="Valeur"
+                    placeholder={t('value')}
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   />
                 )
@@ -654,10 +675,10 @@ export function ColumnPopup<T>({
                     value={filterText}
                     onChange={(e) => setFilterText(e.target.value)}
                     placeholder={
-                      filterTextOp === 'contains' ? 'Contient…' :
-                      filterTextOp === 'equals' ? 'Valeur exacte' :
-                      filterTextOp === 'starts' ? 'Commence par…' :
-                      filterTextOp === 'ends' ? 'Finit par…' : 'Valeur'
+                      filterTextOp === 'contains' ? t('textOp.containsPlaceholder') :
+                      filterTextOp === 'equals' ? t('textOp.equalsPlaceholder') :
+                      filterTextOp === 'starts' ? t('textOp.startsPlaceholder') :
+                      filterTextOp === 'ends' ? t('textOp.endsPlaceholder') : t('value')
                     }
                     className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   />
@@ -671,13 +692,13 @@ export function ColumnPopup<T>({
               <div className="mb-1.5 flex items-center justify-between">
                 <div className="flex gap-2">
                   <button onClick={selectAll} className="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400">
-                    Tous
+                    {t('checkbox.all')}
                   </button>
                   <button onClick={selectNone} className="text-xs font-medium text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-300">
-                    Aucun
+                    {t('checkbox.none')}
                   </button>
                 </div>
-                <span className="text-[10px] text-slate-400">{filterOptions.length} valeurs</span>
+                <span className="text-[10px] text-slate-400">{t('checkbox.valuesCount', { count: filterOptions.length })}</span>
               </div>
 
               {needsSearch && (
@@ -687,7 +708,7 @@ export function ColumnPopup<T>({
                     type="text"
                     value={optionSearch}
                     onChange={(e) => setOptionSearch(e.target.value)}
-                    placeholder="Rechercher..."
+                    placeholder={t('search')}
                     className="w-full rounded border border-slate-200 py-1 pl-6 pr-2 text-xs text-slate-600 placeholder:text-slate-400 focus:border-primary-400 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
                   />
                 </div>
@@ -712,7 +733,7 @@ export function ColumnPopup<T>({
                   )
                 })}
                 {filteredOptions.length === 0 && (
-                  <p className="py-2 text-center text-xs text-slate-400">Aucune valeur correspondante</p>
+                  <p className="py-2 text-center text-xs text-slate-400">{t('noMatchingValues')}</p>
                 )}
               </div>
             </div>
@@ -723,7 +744,7 @@ export function ColumnPopup<T>({
       {/* Footer aggregation */}
       {aggOptions.length > 0 && (
         <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Pied de colonne</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">{t('footer.title')}</p>
           <div className="flex flex-wrap gap-1.5">
             <button
               onClick={() => setAggFn(null)}
@@ -734,7 +755,7 @@ export function ColumnPopup<T>({
                   : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800',
               )}
             >
-              Aucun
+              {t('footer.none')}
             </button>
             {aggOptions.map(fn => (
               <button
@@ -747,7 +768,7 @@ export function ColumnPopup<T>({
                     : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800',
                 )}
               >
-                {AGG_LABELS[fn]}
+                {getAggLabel(fn, t)}
               </button>
             ))}
           </div>
@@ -772,7 +793,7 @@ export function ColumnPopup<T>({
           >
             <span className="flex items-center gap-2">
               <Wrench className="h-4 w-4" />
-              Personnaliser l'affichage
+              {t('designer.open')}
             </span>
             <ChevronRight className={clsx('h-4 w-4 transition-transform', designerOpen && 'text-primary-500')} />
           </button>
@@ -785,14 +806,14 @@ export function ColumnPopup<T>({
           onClick={handleClearAll}
           className="text-sm text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors"
         >
-          Réinitialiser
+          {t('column.reset')}
         </button>
         <div className="flex items-center gap-2">
           {onAddHiddenColumn && hiddenColumnsList && hiddenColumnsList.length > 0 && (
             <button
               onClick={() => setAddColumnOpen(v => !v)}
               className="inline-flex items-center justify-center h-6 w-6 rounded text-slate-500 hover:text-primary-600 hover:bg-primary-50 dark:text-slate-400 dark:hover:text-primary-400 dark:hover:bg-primary-950/30 transition-colors"
-              title="Ajouter une colonne à côté"
+              title={t('addColumnNext')}
             >
               <Plus className="h-4 w-4" />
             </button>
@@ -801,10 +822,10 @@ export function ColumnPopup<T>({
             <button
               onClick={() => { onHide(); onClose() }}
               className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
-              title="Masquer cette colonne dans la vue courante"
+              title={t('column.hideTooltip')}
             >
               <EyeOff className="h-3.5 w-3.5" />
-              Masquer colonne
+              {t('column.hide')}
             </button>
           )}
         </div>
@@ -820,7 +841,7 @@ export function ColumnPopup<T>({
                   autoFocus
                   value={addColumnSearch}
                   onChange={e => setAddColumnSearch(e.target.value)}
-                  placeholder="Rechercher une colonne..."
+                  placeholder={t('searchColumn')}
                   className="flex-1 bg-transparent text-sm text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none"
                 />
               </div>
@@ -839,7 +860,7 @@ export function ColumnPopup<T>({
                   ))
                 }
                 {hiddenColumnsList.filter(c => c.header.toLowerCase().includes(addColumnSearch.toLowerCase())).length === 0 && (
-                  <div className="px-3 py-2 text-xs text-slate-400 dark:text-slate-500">Aucune colonne masquée</div>
+                  <div className="px-3 py-2 text-xs text-slate-400 dark:text-slate-500">{t('noHiddenColumns')}</div>
                 )}
               </div>
             </div>
@@ -853,7 +874,7 @@ export function ColumnPopup<T>({
       <div className="w-[360px] max-h-[70vh] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl animate-fade-in dark:border-slate-700 dark:bg-slate-900">
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
-          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Configurer l'affichage</h3>
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t('designer.title')}</h3>
           <button
             onClick={() => setDesignerOpen(false)}
             className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:bg-slate-800 hover:text-slate-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-300"
@@ -872,7 +893,7 @@ export function ColumnPopup<T>({
             : null
           return (
             <div className="mx-4 mt-3 rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 dark:border-slate-700 dark:from-slate-800/50 dark:to-slate-900">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400 mb-2">Aperçu</p>
+              <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400 mb-2">{t('designer.preview')}</p>
               <div className="flex items-center gap-3">
                 {hasImg && (
                   imgUrl
@@ -900,7 +921,7 @@ export function ColumnPopup<T>({
         <div className="px-4 pt-4 pb-3 space-y-3">
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-              Ligne principale
+              {t('designer.mainLine')}
             </label>
             <input
               ref={entityMainRef}
@@ -914,13 +935,13 @@ export function ColumnPopup<T>({
                 'dark:bg-slate-800 dark:text-slate-300',
                 entityActiveInput === 'main' ? 'border-primary-400 dark:border-primary-500' : 'border-slate-200 dark:border-slate-700',
               )}
-              placeholder="{reference} — {typeBien}"
+              placeholder={t('designer.mainPlaceholder')}
             />
           </div>
           <div>
             <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-              Sous-titre
-              <span className="font-normal text-slate-400 text-[10px]">optionnel</span>
+              {t('designer.subLine')}
+              <span className="font-normal text-slate-400 text-[10px]">{t('designer.optional')}</span>
             </label>
             <input
               ref={entitySubRef}
@@ -934,7 +955,7 @@ export function ColumnPopup<T>({
                 'dark:bg-slate-800 dark:text-slate-300',
                 entityActiveInput === 'sub' ? 'border-primary-400 dark:border-primary-500' : 'border-slate-200 dark:border-slate-700',
               )}
-              placeholder="{adresse}"
+              placeholder={t('designer.subPlaceholder')}
             />
           </div>
         </div>
@@ -942,7 +963,7 @@ export function ColumnPopup<T>({
         {/* Variable chips */}
         <div className="border-t border-slate-100 dark:border-slate-800 px-4 py-3">
           <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400 mb-2.5">
-            Cliquer pour insérer un champ
+            {t('designer.clickToInsert')}
           </p>
           <div className="space-y-2.5">
             {entityGrouped.map(([group, vars]: [string, EntityVar[]]) => (
@@ -967,13 +988,13 @@ export function ColumnPopup<T>({
 
         {/* Sort field */}
         <div className="border-t border-slate-100 dark:border-slate-800 px-4 py-3">
-          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">Trier par</label>
+          <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5">{t('designer.sortBy')}</label>
           <select
             value={entitySortField}
             onChange={e => setEntitySortField(e.target.value)}
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
           >
-            <option value="">Par défaut</option>
+            <option value="">{t('designer.default')}</option>
             {entityVars.filter(v => !v.key.includes('.') || v.format).map(v => (
               <option key={v.key} value={v.key}>{v.label}</option>
             ))}
@@ -988,7 +1009,7 @@ export function ColumnPopup<T>({
               className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
             >
               <RotateCcw className="h-3 w-3" />
-              Réinitialiser par défaut
+              {t('designer.resetDefaults')}
             </button>
           </div>
         )}

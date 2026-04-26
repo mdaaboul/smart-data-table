@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Copy, ClipboardCopy, ExternalLink, EyeOff } from 'lucide-react'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
 import type { SmartColumn } from './types'
 
 // Menu contextuel au clic droit sur une cellule. Pattern Airtable/Ninox :
@@ -50,6 +51,7 @@ export function CellContextMenu<T>({
   onCopyCell,
   onCopyRow,
 }: CellContextMenuProps<T>) {
+  const { t } = useTranslation('common', { keyPrefix: 'smartTable' })
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Clic hors du menu ou Esc = fermer
@@ -75,7 +77,7 @@ export function CellContextMenu<T>({
 
   const actions: Action[] = [
     {
-      label: 'Copier la cellule',
+      label: t('context.copyCell'),
       icon: <Copy className="h-3.5 w-3.5" />,
       onClick: () => {
         navigator.clipboard.writeText(cellText).catch(() => {})
@@ -85,7 +87,7 @@ export function CellContextMenu<T>({
       shortcut: '⌘C',
     },
     {
-      label: 'Copier la ligne',
+      label: t('context.copyRow'),
       icon: <ClipboardCopy className="h-3.5 w-3.5" />,
       onClick: () => {
         // Copie en TSV pour que le coller dans Excel/Sheets garde la
@@ -95,13 +97,13 @@ export function CellContextMenu<T>({
       },
     },
     ...(onOpenRow ? [{
-      label: 'Ouvrir la ligne',
+      label: t('context.openRow'),
       icon: <ExternalLink className="h-3.5 w-3.5" />,
       onClick: () => { onOpenRow(target.row); onClose() },
       shortcut: '↵',
     }] : []),
     ...(onHideColumn && !target.column.fixed ? [{
-      label: `Masquer "${target.column.header}"`,
+      label: t('context.hideQuoted', { header: target.column.header }),
       icon: <EyeOff className="h-3.5 w-3.5" />,
       onClick: () => { onHideColumn(target.column.id); onClose() },
     }] : []),
@@ -123,7 +125,7 @@ export function CellContextMenu<T>({
       <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{target.column.header}</p>
         <p className="text-xs text-slate-700 dark:text-slate-300 truncate" title={cellText}>
-          {cellText || <span className="italic text-slate-400">vide</span>}
+          {cellText || <span className="italic text-slate-400">{t('context.empty')}</span>}
         </p>
       </div>
       {actions.map((a, i) => (

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react'
 import { Paintbrush, ChevronDown, X, AlignLeft, AlignCenter, AlignRight } from 'lucide-react'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
 import type { ColumnStyle } from './types'
 
 // ─── Accordion ─────────────────────────────────────────────
@@ -53,6 +54,7 @@ function ColorDot({
   value: string
   onChange: (v: string) => void
 }) {
+  const { t } = useTranslation('common', { keyPrefix: 'smartTable' })
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const active = value || ''
@@ -83,7 +85,7 @@ function ColorDot({
         <button
           onClick={() => onChange('')}
           className="text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-300"
-          title="Retirer"
+          title={t('remove')}
         >
           <X className="h-3 w-3" />
         </button>
@@ -114,7 +116,7 @@ function ColorDot({
               onChange={(e) => { onChange(e.target.value); setOpen(false) }}
               className="h-6 w-6 cursor-pointer rounded border-0 p-0"
             />
-            <span className="text-[10px] text-slate-400">Personnalisée</span>
+            <span className="text-[10px] text-slate-400">{t('custom')}</span>
           </div>
         </div>
       )}
@@ -161,22 +163,23 @@ interface ColumnStylerProps {
 }
 
 export function ColumnStyler({ style, setStyle }: ColumnStylerProps) {
+  const { t } = useTranslation('common', { keyPrefix: 'smartTable' })
   return (
-    <Accordion title="Apparence" icon={<Paintbrush className="h-4 w-4" />} defaultOpen={false}>
+    <Accordion title={t('appearance.title')} icon={<Paintbrush className="h-4 w-4" />} defaultOpen={false}>
       <div className="space-y-2.5">
         {/* Colors — compact dot + popover */}
         <ColorDot
-          label="Bordure gauche"
+          label={t('appearance.borderLeft')}
           value={style.borderLeft ?? ''}
           onChange={(v) => setStyle({ ...style, borderLeft: v || undefined })}
         />
         <ColorDot
-          label="Bordure droite"
+          label={t('appearance.borderRight')}
           value={style.borderRight ?? ''}
           onChange={(v) => setStyle({ ...style, borderRight: v || undefined })}
         />
         <ColorDot
-          label="Fond"
+          label={t('appearance.background')}
           value={style.background ?? ''}
           onChange={(v) => setStyle({ ...style, background: v || undefined })}
         />
@@ -184,12 +187,12 @@ export function ColumnStyler({ style, setStyle }: ColumnStylerProps) {
         {/* Border width — only when a border is active */}
         {(style.borderLeft || style.borderRight) && (
           <div>
-            <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">Épaisseur bordure</p>
+            <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">{t('appearance.borderWidth')}</p>
             <ButtonGroup
               options={[
-                { value: '1px', label: 'Fin' },
-                { value: '2px', label: 'Moyen' },
-                { value: '3px', label: 'Épais' },
+                { value: '1px', label: t('appearance.thin') },
+                { value: '2px', label: t('appearance.medium') },
+                { value: '3px', label: t('appearance.thick') },
               ]}
               value={style.borderLeftWidth ?? '1px'}
               onChange={(v) => setStyle({ ...style, borderLeftWidth: v })}
@@ -202,24 +205,24 @@ export function ColumnStyler({ style, setStyle }: ColumnStylerProps) {
 
         {/* Typography */}
         <div>
-          <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">Épaisseur</p>
+          <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">{t('appearance.weight')}</p>
           <ButtonGroup
             options={[
-              { value: '300', label: 'Léger' },
-              { value: '400', label: 'Normal' },
-              { value: '700', label: 'Gras' },
-              { value: '900', label: 'Épais' },
+              { value: '300', label: t('appearance.light') },
+              { value: '400', label: t('appearance.normal') },
+              { value: '700', label: t('appearance.bold') },
+              { value: '900', label: t('appearance.heavy') },
             ]}
             value={style.fontWeight ?? '400'}
             onChange={(v) => setStyle({ ...style, fontWeight: v })}
           />
         </div>
         <div>
-          <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">Style</p>
+          <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">{t('appearance.style')}</p>
           <ButtonGroup
             options={[
-              { value: 'normal', label: 'Normal' },
-              { value: 'italic', label: 'Italique' },
+              { value: 'normal', label: t('appearance.normal') },
+              { value: 'italic', label: t('appearance.italic') },
             ]}
             value={style.fontStyle ?? 'normal'}
             onChange={(v) => setStyle({ ...style, fontStyle: v })}
@@ -227,7 +230,7 @@ export function ColumnStyler({ style, setStyle }: ColumnStylerProps) {
         </div>
         <div className="flex items-center gap-4">
           <div>
-            <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">Taille</p>
+            <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">{t('appearance.size')}</p>
             <ButtonGroup
               options={[
                 { value: 'S', label: 'S' },
@@ -239,7 +242,7 @@ export function ColumnStyler({ style, setStyle }: ColumnStylerProps) {
             />
           </div>
           <div>
-            <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">Alignement</p>
+            <p className="mb-1.5 text-xs text-slate-500 dark:text-slate-400">{t('appearance.alignment')}</p>
             <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
               {([
                 { value: 'left', icon: <AlignLeft className="h-3.5 w-3.5" /> },
@@ -278,7 +281,7 @@ export function ColumnStyler({ style, setStyle }: ColumnStylerProps) {
             textAlign: (style.textAlign as React.CSSProperties['textAlign']) ?? undefined,
           }}
         >
-          <span className="text-slate-600 dark:text-slate-400">Texte d'exemple</span>
+          <span className="text-slate-600 dark:text-slate-400">{t('appearance.sampleText')}</span>
         </div>
       </div>
     </Accordion>

@@ -6,10 +6,12 @@ import {
 } from '@tanstack/react-table'
 import { ArrowUp, ArrowDown, Filter, ChevronRight, ChevronUp, ChevronDown, Settings, Check, Eye, EyeOff, SlidersHorizontal } from 'lucide-react'
 import { clsx } from 'clsx'
+import { useTranslation } from 'react-i18next'
 import type { AllSettings, SmartColumn, AggFn } from './types'
 import type { PrefsAPI } from './useTableState'
-import { getTypoStyle, AGG_LABELS } from './helpers'
-import { EmptyState } from '../EmptyState'
+import { getTypoStyle, getAggLabel } from './helpers'
+// EmptyState lives at the bottom of this file as a small inline component —
+// the package intentionally does not depend on the consumer's design system.
 import { CellContextMenu, type CellContextTarget } from './CellContextMenu'
 
 interface TableViewProps<T> {
@@ -77,6 +79,7 @@ export function TableView<T>({
   aggregatedRowCount,
   aggregatedTotalRows,
 }: TableViewProps<T>) {
+  const { t } = useTranslation('common', { keyPrefix: 'smartTable' })
   const rows = table.getRowModel().rows
   const skeletonRows = useMemo(() => Array.from({ length: 5 }, (_, i) => i), [])
   const isResizing = table.getState().columnSizingInfo.isResizingColumn
@@ -278,7 +281,7 @@ export function TableView<T>({
     <div
       ref={scrollContainerRef}
       role="region"
-      aria-label="Tableau de données"
+      aria-label={t('table.ariaLabel')}
       className={clsx(
         'relative rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900',
         'overflow-y-auto max-h-[calc(100vh-280px)]',
@@ -317,7 +320,7 @@ export function TableView<T>({
                     checked={!!pageFullSel}
                     ref={(el) => { if (el) el.indeterminate = !!pagePartialSel }}
                     onChange={() => onTogglePage?.()}
-                    aria-label="Tout sélectionner"
+                    aria-label={t('table.selectAllAria')}
                     className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 dark:border-slate-500 dark:bg-slate-600 dark:checked:bg-primary-500 dark:focus:ring-primary-400 cursor-pointer"
                   />
                 </th>
@@ -379,7 +382,7 @@ export function TableView<T>({
                           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
                           openHeaderPopup(colId, rect)
                         }}
-                        title="Clic pour trier, clic droit ou chevron pour filtrer/styler"
+                        title={t('table.headerSortHint')}
                       >
                         <span className="truncate">
                           {flexRender(header.column.columnDef.header, header.getContext())}
@@ -419,7 +422,7 @@ export function TableView<T>({
                             const rect = (e.currentTarget.closest('th') as HTMLElement).getBoundingClientRect()
                             openHeaderPopup(colId, rect)
                           }}
-                          aria-label="Options de colonne"
+                          aria-label={t('table.columnOptions')}
                           className={clsx(
                             'ml-auto shrink-0 rounded p-0.5 transition-opacity',
                             'opacity-0 group-hover/header:opacity-100 focus:opacity-100',
@@ -428,7 +431,7 @@ export function TableView<T>({
                               ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300'
                               : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200',
                           )}
-                          title="Filtrer, agréger, styliser…"
+                          title={t('table.filterAggregateStyle')}
                         >
                           <ChevronDown className={clsx('h-3.5 w-3.5 transition-transform', activePopupId === colId && 'rotate-180')} />
                         </button>
@@ -469,7 +472,7 @@ export function TableView<T>({
                   {showCogHint && !cogOpen && (
                     <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 z-40 flex items-center animate-bounce-gentle">
                       <span className="whitespace-nowrap rounded-md bg-amber-500 px-2.5 py-1.5 text-xs font-semibold text-white shadow-lg dark:bg-amber-400 dark:text-slate-900">
-                        Personnaliser les colonnes
+                        {t('table.customizeColumns')}
                       </span>
                       <span className="w-0 h-0 border-y-[5px] border-y-transparent border-l-[6px] border-l-amber-500 dark:border-l-amber-400 shrink-0" />
                     </div>
@@ -508,12 +511,12 @@ export function TableView<T>({
                         )}>
                           {fitColumns && <Check className="h-3 w-3" />}
                         </div>
-                        Ajuster à la largeur
+                        {t('table.fitToWidth')}
                       </button>
 
                       {/* Column visibility */}
                       <div className="border-t border-slate-100 dark:border-slate-800 px-3 py-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Colonnes</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{t('table.columns')}</p>
                         <div className="space-y-0.5">
                           {smartColumns.map((col) => {
                             const visible = !hiddenColumns.has(col.id)
@@ -600,7 +603,7 @@ export function TableView<T>({
                           type="checkbox"
                           checked={rowChecked}
                           onChange={() => onToggleRow?.(rowId)}
-                          aria-label="Sélectionner"
+                          aria-label={t('selection.selectRowAriaLabel')}
                           className="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 dark:border-slate-500 dark:bg-slate-600 dark:checked:bg-primary-500 dark:focus:ring-primary-400 cursor-pointer"
                         />
                       </td>
@@ -686,11 +689,11 @@ export function TableView<T>({
                           className="text-[10px] uppercase tracking-wider text-slate-400 dark:text-slate-400 font-medium leading-tight"
                           title={
                             aggregatedTotalRows != null && aggregatedRowCount != null && aggregatedTotalRows > aggregatedRowCount
-                              ? `Calcul effectué sur ${aggregatedRowCount.toLocaleString('fr-FR')} ligne(s) chargée(s) sur ${aggregatedTotalRows.toLocaleString('fr-FR')} au total. Augmentez la taille de page pour inclure plus de lignes.`
+                              ? t('footer.computedHint', { loaded: aggregatedRowCount, total: aggregatedTotalRows })
                               : undefined
                           }
                         >
-                          {AGG_LABELS[agg.fn]}
+                          {getAggLabel(agg.fn, t)}
                           {aggregatedRowCount != null && aggregatedTotalRows != null && aggregatedTotalRows > aggregatedRowCount && (
                             <span className="ml-1 text-slate-500 dark:text-slate-300 normal-case tracking-normal">
                               · {aggregatedRowCount}/{aggregatedTotalRows}
@@ -770,10 +773,27 @@ export function TableView<T>({
       >
         <span className="flex items-center gap-1 mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
           <ChevronUp className="h-3 w-3" />
-          Remonter
+          {t('scrollUp')}
         </span>
       </div>
     )}
+    </div>
+  )
+}
+
+// ─── Inline EmptyState ─────────────────────────────────────
+//
+// Minimal "no rows" placeholder. Kept inline so the package does not
+// depend on the consumer's design system. `action` is passed as a
+// pre-rendered ReactNode (typically a styled button) by the caller —
+// see the call site near the empty-rows tbody guard above.
+
+function EmptyState({ icon: Icon, title, action }: { icon?: any; title: string; action?: import('react').ReactNode }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+      {Icon && <Icon className="h-10 w-10 text-slate-300 dark:text-slate-600" />}
+      <p className="text-sm text-slate-500 dark:text-slate-400">{title}</p>
+      {action}
     </div>
   )
 }

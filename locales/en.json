@@ -1,0 +1,187 @@
+{
+  "search": "Search...",
+  "searchColumn": "Search a column...",
+  "clear": "Clear",
+  "clearSearch": "Clear search",
+  "clearAll": "Clear all",
+  "clearDates": "Clear dates",
+  "close": "Close (Esc)",
+  "closeSimple": "Close",
+  "noResults": "No results",
+  "noMatchingValues": "No matching values",
+  "noHiddenColumns": "No hidden columns",
+  "items": "items",
+  "value": "Value",
+  "remove": "Remove",
+  "custom": "Custom",
+  "switchBackToPagination": "Switch back to pagination",
+  "scrollUp": "Scroll up",
+  "activeFilters": "Active filters",
+  "activeFiltersTitle": "Active filters",
+  "addLabel": "Add",
+  "addColumnNext": "Add column next to this one",
+  "filterCount": "{{count}} values",
+  "filterFrom": "from {{date}}",
+  "filterUntil": "until {{date}}",
+  "filterGreaterEqual": ">= {{value}}",
+  "filterLessEqual": "<= {{value}}",
+  "filterRange": "{{from}} -> {{to}}",
+  "selection": {
+    "selected": "{{count}} selected",
+    "selectAll": "Select all",
+    "selectAllCount": "Select all ({{count}})",
+    "selectAllItems": "Select all {{count}} items",
+    "selectAllAriaLabel": "Select all",
+    "selectRowAriaLabel": "Select row",
+    "deselect": "Deselect",
+    "deselectAll": "Clear selection",
+    "allPages": "(all pages)"
+  },
+  "table": {
+    "ariaLabel": "Data table",
+    "selectAllAria": "Select all",
+    "headerSortHint": "Click to sort, right-click or chevron to filter/style",
+    "columnOptions": "Column options",
+    "filterAggregateStyle": "Filter, aggregate, style...",
+    "customizeColumns": "Customize columns",
+    "fitToWidth": "Fit to width",
+    "columns": "Columns"
+  },
+  "pagination": {
+    "rangeOf": "{{from}}-{{to}} of {{total}}",
+    "perPage": "{{count}} per page",
+    "infiniteScroll": "Infinite scroll",
+    "infiniteScrollHint": "Switch to infinite scroll",
+    "firstPage": "First page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "lastPage": "Last page"
+  },
+  "export": {
+    "button": "Export",
+    "csv": "Export as CSV",
+    "excel": "Export as Excel"
+  },
+  "sort": {
+    "title": "Sort",
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "azc": "A -> Z",
+    "azd": "Z -> A",
+    "label": "Sort"
+  },
+  "filter": {
+    "title": "Filter",
+    "from": "From",
+    "to": "To",
+    "min": "Min",
+    "max": "Max"
+  },
+  "textOp": {
+    "contains": "Contains",
+    "equals": "Equals",
+    "starts": "Starts with",
+    "ends": "Ends with",
+    "empty": "Is empty",
+    "notEmpty": "Is not empty",
+    "containsPlaceholder": "Contains...",
+    "equalsPlaceholder": "Exact value",
+    "startsPlaceholder": "Starts with...",
+    "endsPlaceholder": "Ends with..."
+  },
+  "numOp": {
+    "between": "Between",
+    "eq": "=",
+    "neq": "!=",
+    "gt": ">",
+    "gte": ">=",
+    "lt": "<",
+    "lte": "<=",
+    "empty": "Is empty",
+    "notEmpty": "Is not empty"
+  },
+  "datePresets": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "last7Days": "Last 7 days",
+    "last30Days": "Last 30 days",
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "thisYear": "This year",
+    "lastYear": "Last year"
+  },
+  "checkbox": {
+    "all": "All",
+    "none": "None",
+    "valuesCount": "{{count}} values"
+  },
+  "footer": {
+    "title": "Footer",
+    "none": "None",
+    "computedHint": "Computed on {{loaded}} loaded row(s) of {{total}} total. Increase page size to include more rows."
+  },
+  "agg": {
+    "sum": "Sum",
+    "count": "Total",
+    "min": "Min",
+    "max": "Max",
+    "avg": "Avg"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "borderLeft": "Left border",
+    "borderRight": "Right border",
+    "background": "Background",
+    "borderWidth": "Border width",
+    "thin": "Thin",
+    "medium": "Medium",
+    "thick": "Thick",
+    "weight": "Weight",
+    "light": "Light",
+    "normal": "Normal",
+    "bold": "Bold",
+    "heavy": "Heavy",
+    "style": "Style",
+    "italic": "Italic",
+    "size": "Size",
+    "alignment": "Alignment",
+    "sampleText": "Sample text"
+  },
+  "column": {
+    "label": "Column",
+    "reset": "Reset",
+    "hide": "Hide column",
+    "hideTooltip": "Hide this column in the current view",
+    "hideQuoted": "Hide \"{{header}}\""
+  },
+  "designer": {
+    "open": "Customize display",
+    "title": "Configure display",
+    "preview": "Preview",
+    "mainLine": "Main line",
+    "subLine": "Sub-line",
+    "optional": "optional",
+    "clickToInsert": "Click to insert a field",
+    "sortBy": "Sort by",
+    "default": "Default",
+    "resetDefaults": "Reset to defaults",
+    "mainPlaceholder": "{reference} -- {typeBien}",
+    "subPlaceholder": "{adresse}"
+  },
+  "context": {
+    "copyCell": "Copy cell",
+    "copyRow": "Copy row",
+    "openRow": "Open row",
+    "hideQuoted": "Hide \"{{header}}\"",
+    "empty": "empty"
+  },
+  "format": {
+    "yes": "Yes",
+    "no": "No",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}}d ago",
+    "monthsAgo": "{{count}}mo ago",
+    "yearsAgo": "{{count}}y ago"
+  }
+}

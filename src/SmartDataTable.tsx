@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,29 +11,30 @@ import {
   type ColumnSizingState,
   type FilterFn,
 } from '@tanstack/react-table'
-import { Search, Table2, LayoutGrid, Columns3, Plus, Home, User, ImageIcon, X, CheckSquare, Settings, Loader2 } from 'lucide-react'
-import { clsx } from 'clsx'
-import type { SmartDataTableProps, SmartColumn, EntityColumnConfig, TableStateSnapshot, CardGridCols, CardLayout } from './types'
+import { Search, Plus, Home, User, ImageIcon, X, CheckSquare, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import type { SmartDataTableProps, SmartColumn, EntityColumnConfig, TableStateSnapshot } from './types'
 import { smartFilterFn, exportCSV, exportExcel, resolveTemplate, extractImageUrl, templateHasImageVar, computeAggregations, getCellStyle } from './helpers'
 import { useTableState } from './useTableState'
-import { useUIPreferences } from '../../../hooks/useUIPreferences'
-import { ENTITY_VARIABLES, DEFAULT_TEMPLATES } from './entityVariables'
 import { TableView } from './TableView'
-import { CardView } from './CardView'
-import { KanbanView } from './KanbanView'
 import { SmartPagination, getScrollMode } from './SmartPagination'
 import { ColumnPopup } from './ColumnPopup'
 import { FilterPills } from './FilterPills'
-import { FilterPanel, countActive } from '../FilterPanel'
 import { ExportDropdown } from './ExportDropdown'
 import { useSelection } from './useSelection'
-import { CardStudio } from './CardStudio'
-import { DEFAULT_CARD_LAYOUTS } from './defaultCardLayouts'
+
+// ENTITY_VARIABLES / DEFAULT_TEMPLATES intentionally stubbed —
+// entity-metadata system is out of scope for this package.
+// Consumers that want template-driven cells can wire entityType
+// + entityAccessor on SmartColumn and provide their own renderers.
+const ENTITY_VARIABLES: Record<string, { key: string; label: string; group: string; format?: string }[]> = {}
+const DEFAULT_TEMPLATES: Record<string, { mainLine: string; subLine?: string; sortField?: string }> = {}
 
 export default function SmartDataTable<T>({
   columns: userColumns,
   data,
   tableId,
+  prefs,
   loading = false,
   onRowClick,
   enablePagination = true,
@@ -46,12 +47,10 @@ export default function SmartDataTable<T>({
   searchPlaceholder,
   emptyTitle,
   emptyAction,
-  viewModes = ['table', 'card'],
+  // Card / kanban view modes are out of scope for this package — viewModes
+  // is kept for API compatibility but only 'table' is actually rendered.
+  viewModes,
   defaultView = 'table',
-  kanban,
-  renderCard,
-  entityType,
-  onKanbanMove,
   actions,
   onAdd,
   addLabel,
@@ -62,21 +61,11 @@ export default function SmartDataTable<T>({
   tableStateRef,
   onTableStateChange,
   initialTableState,
-  cardData,
-  cardTotal,
-  onViewModeChange,
-  cardHasMore,
-  cardLoadMore,
-  cardLoadingMore,
   onScrollModeChange: onScrollModeChangeProp,
   onSortChange,
-  filterDefs,
-  filterValues,
-  onFilterChange,
-  onFilterReset,
   onGlobalSearch,
 }: SmartDataTableProps<T>) {
-  const prefs = useUIPreferences()
+  const { t } = useTranslation('common', { keyPrefix: 'smartTable' })
 
   // ── Built-in ID column (first after checkbox) ─────────────
   const resolvedGetRowId = useMemo(
@@ -86,7 +75,7 @@ export default function SmartDataTable<T>({
   const allSmartColumns = useMemo<SmartColumn<T>[]>(() => {
     const idCol: SmartColumn<T> = {
       id: '_id',
-      header: 'ID',
+      header: 'ID', // Technical column header — keep untranslated; consumers can override via column override
       accessorFn: (row) => resolvedGetRowId(row),
       cell: ({ value }) => (
         <span className="inline-block rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:text-slate-400 select-all">
@@ -458,39 +447,14 @@ export default function SmartDataTable<T>({
     return cleaned
   })
 
-  // ── Grid columns (card view) ──────────────────────────────
-  const [gridCols, setGridCols] = useState<CardGridCols>(
-    () => prefs.get<CardGridCols>(`${tableId}-grid-cols`, 4),
-  )
-  const changeGridCols = (n: CardGridCols) => { setGridCols(n); prefs.set(`${tableId}-grid-cols`, n) }
-
   // ── Scroll mode helpers ──────────────────────────────────
   const changeScrollMode = (mode: 'pagination' | 'infinite') => {
     setScrollMode(mode)
     onScrollModeChangeProp?.(mode)
   }
-  // ── Card layout (SmartCard) ──────────────────────────────
-  // Not cached in localStorage — persisted via saved views snapshot instead.
-  // This avoids stale defaults when the default layout is updated.
-  const [cardLayout, setCardLayout] = useState<CardLayout | undefined>(() => {
-    // Clean up stale card-layout from prior version stored in UI prefs
-    const prefKey = `${tableId}-card-layout`
-    try {
-      const raw = localStorage.getItem('trobia-ui-prefs')
-      if (raw) {
-        const prefs = JSON.parse(raw)
-        if (prefs[prefKey]) { delete prefs[prefKey]; localStorage.setItem('trobia-ui-prefs', JSON.stringify(prefs)) }
-      }
-    } catch { /* ignore */ }
-    return entityType ? DEFAULT_CARD_LAYOUTS[entityType] : undefined
-  })
-  const changeCardLayout = (l: CardLayout) => setCardLayout(l)
-  const [showCardStudio, setShowCardStudio] = useState(false)
 
   // ── Expose table state snapshot for external consumers ─────
   useEffect(() => {
-    // Only include cardLayout in snapshot if user customized it (has renderAs/imageOverlay)
-    const isCustomLayout = cardLayout?.zones?.some(z => z.fields?.some(f => f.renderAs || f.imageOverlay))
     const snapshot: TableStateSnapshot = {
       hiddenColumns: Array.from(hiddenColumns),
       columnOrder,
@@ -498,13 +462,11 @@ export default function SmartDataTable<T>({
       columnSizing,
       pageSize: internalPageSize,
       viewMode,
-      gridCols,
-      cardLayout: isCustomLayout ? cardLayout : undefined,
       filteredRowCount: filteredData.length,
     }
     if (tableStateRef) tableStateRef.current = snapshot
     onTableStateChange?.(snapshot)
-  }, [hiddenColumns, columnOrder, allSettings, columnSizing, internalPageSize, viewMode, gridCols, cardLayout, filteredData.length])
+  }, [hiddenColumns, columnOrder, allSettings, columnSizing, internalPageSize, viewMode, filteredData.length])
 
   // ── Restore table state from external snapshot (view switching) ─
   const restoreCountRef = useRef(0)
@@ -526,15 +488,8 @@ export default function SmartDataTable<T>({
       setColumnSizing(initialTableState.columnSizing)
       prefs.set(`${tableId}-col-sizing`, initialTableState.columnSizing)
     }
-    // Always restore view mode and grid cols
-    changeView(initialTableState.viewMode ?? 'table')
-    changeGridCols(initialTableState.gridCols ?? 4)
-    // Only restore cardLayout if it was user-customized (has renderAs fields).
-    // Stale snapshots from before Card Studio won't override new defaults.
-    if (initialTableState.cardLayout) {
-      const hasCustomization = initialTableState.cardLayout.zones?.some(z => z.fields?.some(f => f.renderAs || f.imageOverlay))
-      if (hasCustomization) changeCardLayout(initialTableState.cardLayout)
-    }
+    // Force table view — card/kanban are out of scope for this package.
+    changeView('table')
   }, [initialTableState])
 
   // TanStack table instance
@@ -681,8 +636,8 @@ export default function SmartDataTable<T>({
   // Current page rows for page-level select/deselect
   const pageRows = useMemo(() => table.getRowModel().rows.map((r) => r.original), [table.getRowModel().rows])
 
-  const resolvedEmptyTitle = emptyTitle ?? 'Aucun résultat'
-  const resolvedAddLabel = addLabel ?? 'Ajouter'
+  const resolvedEmptyTitle = emptyTitle ?? t('noResults')
+  const resolvedAddLabel = addLabel ?? t('addLabel')
 
   const popupSmartColumn = activePopup ? allSmartColumns.find((c) => c.id === activePopup) : null
 
@@ -712,7 +667,7 @@ export default function SmartDataTable<T>({
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <CheckSquare className="h-4 w-4 text-primary-600 dark:text-primary-400 shrink-0" />
               <span className="text-sm font-medium text-primary-700 dark:text-primary-300 whitespace-nowrap">
-                {selection.state.count} sélectionné{selection.state.count > 1 ? 's' : ''}
+                {t('selection.selected', { count: selection.state.count })}
               </span>
               {!allSelectedAcrossPages && selection.state.count === pageRows.length && totalRows > pageRows.length && (
                 <>
@@ -721,12 +676,12 @@ export default function SmartDataTable<T>({
                     onClick={selection.selectAll}
                     className="text-sm text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-200 underline whitespace-nowrap"
                   >
-                    Tout sélectionner ({totalRows})
+                    {t('selection.selectAllCount', { count: totalRows })}
                   </button>
                 </>
               )}
               {allSelectedAcrossPages && totalRows > pageRows.length && (
-                <span className="text-xs text-primary-500 dark:text-primary-400 whitespace-nowrap">(toutes les pages)</span>
+                <span className="text-xs text-primary-500 dark:text-primary-400 whitespace-nowrap">{t('selection.allPages')}</span>
               )}
               <span className="text-slate-300 dark:text-slate-600">|</span>
               <button
@@ -734,7 +689,7 @@ export default function SmartDataTable<T>({
                 className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 whitespace-nowrap"
               >
                 <X className="h-3.5 w-3.5" />
-                Désélectionner
+                {t('selection.deselect')}
               </button>
             </div>
             {/* Built-in export for selection */}
@@ -757,7 +712,7 @@ export default function SmartDataTable<T>({
                 type="text"
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
-                placeholder={searchPlaceholder ?? "Rechercher..."}
+                placeholder={searchPlaceholder ?? t('search')}
                 className="w-full rounded-lg border bg-white py-2 pl-9 pr-8 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:bg-slate-800 dark:text-white border-slate-300 dark:border-slate-600"
               />
               {globalSearch && (
@@ -765,13 +720,13 @@ export default function SmartDataTable<T>({
                   type="button"
                   onClick={() => { setGlobalSearch(''); if (onGlobalSearch) { setSearchPending(true); onGlobalSearch('') } }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-300 transition-colors"
-                  title="Effacer la recherche"
+                  title={t('clearSearch')}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
-              {/* Filter count badge on search input — only when filterDefs is NOT provided (legacy) */}
-              {!filterDefs && activeFilterCount > 0 && (
+              {/* Filter count badge on search input */}
+              {activeFilterCount > 0 && (
                 <div className="absolute right-2 top-1/2 -translate-y-1/2">
                   <button
                     ref={(el) => { if (el) (el as any).__rect = el.getBoundingClientRect() }}
@@ -781,79 +736,13 @@ export default function SmartDataTable<T>({
                       setActivePopup(activePopup === ('__filters' as any) ? null : '__filters' as any)
                     }}
                     className="flex items-center justify-center w-5 h-5 rounded-full bg-primary-600 text-[10px] font-bold text-white hover:bg-primary-700 transition-colors"
-                    title="Filtres actifs"
+                    title={t('activeFiltersTitle')}
                   >
                     {activeFilterCount}
                   </button>
                 </div>
               )}
             </div>
-
-            {/* Unified Filtres button — when filterDefs provided */}
-            {filterDefs && (
-              <FilterPanel
-                definitions={filterDefs}
-                values={filterValues ?? {}}
-                onChange={(key, value) => onFilterChange?.(key, value)}
-                onReset={() => { onFilterReset?.(); updateSettings({}) }}
-                extraBadgeCount={activeFilterCount}
-              />
-            )}
-
-            {/* View mode switcher */}
-            {viewModes && viewModes.length > 1 && (
-              <div className="inline-flex rounded-lg border border-slate-300 dark:border-slate-600">
-                {viewModes.map((mode) => {
-                  const Icon = mode === 'table' ? Table2 : mode === 'card' ? LayoutGrid : Columns3
-                  const label = mode === 'table' ? 'Tableau' : mode === 'card' ? 'Cartes' : 'Kanban'
-                  return (
-                    <button
-                      key={mode}
-                      onClick={() => { changeView(mode); onViewModeChange?.(mode); selection.clear() }}
-                      title={label}
-                      className={clsx(
-                        'px-2.5 py-2 transition-colors first:rounded-l-lg last:rounded-r-lg',
-                        viewMode === mode
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-white text-slate-500 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700',
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* Grid columns selector — only in card view */}
-            {viewMode === 'card' && (
-              <div className="hidden sm:flex items-center gap-1">
-                <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 gap-0.5">
-                  {([4, 5, 6, 8] as const).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => changeGridCols(n)}
-                      className={clsx(
-                        'px-2 py-1.5 rounded-md text-xs font-medium transition-colors min-w-[28px] text-center',
-                        gridCols === n
-                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
-                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-700',
-                      )}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-                {/* Card Studio cog */}
-                <button
-                  onClick={() => setShowCardStudio(true)}
-                  title="Personnaliser la carte"
-                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 dark:bg-slate-800 hover:text-slate-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-300 transition-colors"
-                >
-                  <Settings className="h-4 w-4" />
-                </button>
-              </div>
-            )}
 
             {actions}
 
@@ -875,23 +764,23 @@ export default function SmartDataTable<T>({
       </div>
 
       {/* Inline filter pills — show when any column or external filters are active */}
-      {(Object.values(allSettings).some(s => s.sort || s.filterText || s.filterValues?.length || s.filterDateFrom || s.filterDateTo || s.filterNumberFrom != null || s.filterNumberTo != null) || (filterDefs && filterValues && countActive(filterDefs, filterValues) > 0)) && (
+      {Object.values(allSettings).some(s => s.sort || s.filterText || s.filterValues?.length || s.filterDateFrom || s.filterDateTo || s.filterNumberFrom != null || s.filterNumberTo != null) && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Filtres actifs</span>
+          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{t('activeFilters')}</span>
           {/* Column filter pills */}
           {Object.entries(allSettings).map(([colId, s]) => {
             const col = allSmartColumns.find((c) => c.id === colId)
             if (!col) return null
             const parts: string[] = []
-            if (s.sort) parts.push(`Trier ${s.sort === 'asc' ? '\u2191' : '\u2193'}`)
+            if (s.sort) parts.push(`${t('sort.label')} ${s.sort === 'asc' ? '\u2191' : '\u2193'}`)
             if (s.filterText) parts.push(`"${s.filterText}"`)
-            if (s.filterValues && s.filterValues.length > 0) parts.push(`${s.filterValues.length} valeurs`)
-            if (s.filterDateFrom && s.filterDateTo) parts.push(`${s.filterDateFrom} \u2192 ${s.filterDateTo}`)
-            else if (s.filterDateFrom) parts.push(`\u00e0 partir de ${s.filterDateFrom}`)
-            else if (s.filterDateTo) parts.push(`jusqu'\u00e0 ${s.filterDateTo}`)
-            if (s.filterNumberFrom != null && s.filterNumberTo != null) parts.push(`${s.filterNumberFrom.toLocaleString('fr-FR')} \u2192 ${s.filterNumberTo.toLocaleString('fr-FR')}`)
-            else if (s.filterNumberFrom != null) parts.push(`\u2265 ${s.filterNumberFrom.toLocaleString('fr-FR')}`)
-            else if (s.filterNumberTo != null) parts.push(`\u2264 ${s.filterNumberTo.toLocaleString('fr-FR')}`)
+            if (s.filterValues && s.filterValues.length > 0) parts.push(t('filterCount', { count: s.filterValues.length }))
+            if (s.filterDateFrom && s.filterDateTo) parts.push(t('filterRange', { from: s.filterDateFrom, to: s.filterDateTo }))
+            else if (s.filterDateFrom) parts.push(t('filterFrom', { date: s.filterDateFrom }))
+            else if (s.filterDateTo) parts.push(t('filterUntil', { date: s.filterDateTo }))
+            if (s.filterNumberFrom != null && s.filterNumberTo != null) parts.push(t('filterRange', { from: s.filterNumberFrom, to: s.filterNumberTo }))
+            else if (s.filterNumberFrom != null) parts.push(t('filterGreaterEqual', { value: s.filterNumberFrom }))
+            else if (s.filterNumberTo != null) parts.push(t('filterLessEqual', { value: s.filterNumberTo }))
             if (parts.length === 0) return null
             return (
               <span key={colId} className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2.5 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
@@ -902,61 +791,11 @@ export default function SmartDataTable<T>({
               </span>
             )
           })}
-          {/* External filter pills */}
-          {(filterDefs ?? []).map((def) => {
-            const vals = filterValues ?? {}
-            let label = ''
-            let clearKeys: string[] = []
-            switch (def.type) {
-              case 'chips':
-              case 'select':
-                if (!vals[def.key] || vals[def.key] === '') return null
-                label = `${def.label}: ${def.options.find(o => o.value === vals[def.key])?.label ?? vals[def.key]}`
-                clearKeys = [def.key]
-                break
-              case 'multiSelect': {
-                const selected = (vals[def.key] as string[]) ?? []
-                if (selected.length === 0) return null
-                label = `${def.label}: ${selected.length}`
-                clearKeys = [def.key]
-                break
-              }
-              case 'range': {
-                const min = vals[def.minKey], max = vals[def.maxKey]
-                if (!min && !max) return null
-                label = `${def.label}: ${min ?? '...'} \u2013 ${max ?? '...'}`
-                clearKeys = [def.minKey, def.maxKey]
-                break
-              }
-              case 'dateRange': {
-                const from = vals[def.fromKey], to = vals[def.toKey]
-                if (!from && !to) return null
-                label = `${def.label}: ${from ?? '...'} \u2013 ${to ?? '...'}`
-                clearKeys = [def.fromKey, def.toKey]
-                break
-              }
-              case 'boolean':
-                if (vals[def.key] === undefined || vals[def.key] === null) return null
-                label = `${def.label}: ${vals[def.key] ? 'Oui' : 'Non'}`
-                clearKeys = [def.key]
-                break
-              default:
-                return null
-            }
-            return (
-              <span key={def.key} className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2.5 py-1 text-xs font-medium text-primary-700 dark:bg-primary-900/40 dark:text-primary-300">
-                {label}
-                <button onClick={() => clearKeys.forEach(k => onFilterChange?.(k, def.type === 'boolean' ? undefined : def.type === 'multiSelect' ? [] : ''))} className="hover:text-primary-900 dark:hover:text-primary-100">
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )
-          })}
           <button
-            onClick={() => { updateSettings({}); onFilterReset?.() }}
+            onClick={() => { updateSettings({}) }}
             className="text-xs text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-300"
           >
-            Tout effacer
+            {t('clearAll')}
           </button>
         </div>
       )}
@@ -1032,7 +871,7 @@ export default function SmartDataTable<T>({
           )}
           {scrollMode === 'infinite' && totalRows > 0 && (
             <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-400 pt-2">
-              <span>{totalRows} éléments</span>
+              <span>{totalRows} {t('items')}</span>
               <button
                 onClick={() => {
                   changeScrollMode('pagination')
@@ -1041,58 +880,17 @@ export default function SmartDataTable<T>({
                 }}
                 className="flex items-center gap-1 px-2 py-1 text-slate-400 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-800 rounded-lg transition-colors"
               >
-                Revenir à la pagination
+                {t('switchBackToPagination')}
               </button>
             </div>
           )}
         </>
       )}
 
-      {/* Card view */}
-      {viewMode === 'card' && (
-        <CardView
-          data={cardData ?? filteredData}
-          visibleColumns={visibleColumns}
-          loading={loading}
-          gridCols={gridCols}
-          onRowClick={onRowClick}
-          renderCard={renderCard}
-          cardLayout={cardLayout}
-          entityType={entityType}
-          getRowId={resolvedGetRowId}
-          emptyTitle={resolvedEmptyTitle}
-          emptyAction={emptyAction}
-          serverHasMore={cardHasMore}
-          serverLoadMore={cardLoadMore}
-          serverLoadingMore={cardLoadingMore}
-        />
-      )}
-
-      {/* Card Studio modal */}
-      {showCardStudio && (
-        <CardStudio
-          entityType={entityType || tableId.replace(/-list$/, '')}
-          layout={cardLayout ?? (entityType ? DEFAULT_CARD_LAYOUTS[entityType] : undefined) ?? { entityType: entityType || tableId.replace(/-list$/, ''), zones: [{ id: 'image', fields: [] }, { id: 'header', fields: [] }, { id: 'body', fields: [] }, { id: 'footer', fields: [] }], imageAspectRatio: '4/3', showImageZone: false }}
-          sampleEntity={data[0] ?? {}}
-          onSave={changeCardLayout}
-          onClose={() => setShowCardStudio(false)}
-          columns={userColumns as SmartColumn<unknown>[]}
-        />
-      )}
-
-      {/* Kanban view */}
-      {viewMode === 'kanban' && kanban && (
-        <KanbanView
-          data={filteredData}
-          kanban={kanban}
-          smartColumns={allSmartColumns}
-          onRowClick={onRowClick}
-          renderCard={renderCard}
-          loading={loading}
-          emptyTitle={resolvedEmptyTitle}
-          onMove={onKanbanMove}
-        />
-      )}
+      {/* Card / Kanban / CardStudio views are intentionally NOT rendered
+          by this package — viewMode is forced to 'table'. The deprecated
+          props (cardData, kanban, renderCard, etc.) remain on
+          SmartDataTableProps for call-site compat but are ignored. */}
 
       {/* Column popup */}
       {activePopup && popupSmartColumn && (
@@ -1147,8 +945,8 @@ export default function SmartDataTable<T>({
           onClose={() => setActivePopup(null)}
         />
       )}
-      {/* Filter pills popover — legacy: only when filterDefs NOT provided */}
-      {!filterDefs && activePopup === ('__filters' as any) && filterPopupRect && (
+      {/* Filter pills popover */}
+      {activePopup === ('__filters' as any) && filterPopupRect && (
         <>
           <div className="fixed inset-0 z-[9998]" onClick={() => setActivePopup(null)} />
           <div

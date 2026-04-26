@@ -1,5 +1,26 @@
 import type { MutableRefObject, ReactNode } from 'react'
-import type { FilterDef } from '../FilterPanel'
+
+// ─── Filter definition (kept exported for consumer use) ─────
+// FilterPanel UI is intentionally NOT shipped in this package.
+// Consumers can still consume `FilterDef` to describe their own
+// filter chrome wired to `onFilterChange` etc. (deprecated props).
+export interface FilterDef {
+  key: string
+  label: string
+  kind: 'text' | 'multi' | 'date' | 'number' | 'boolean'
+  options?: { value: string; label: string }[]
+}
+
+// ─── Preferences API (injected by consumer) ─────────────────
+//
+// Consumers wire this to whatever persistence they want
+// (localStorage, server-backed user prefs, in-memory). Use
+// `createLocalStoragePrefs()` from `./useTableState` for the
+// no-config localStorage default.
+export interface PrefsAPI {
+  get<T>(key: string, fallback: T): T
+  set(key: string, value: unknown): void
+}
 
 // ─── Column definition ──────────────────────────────────────
 
@@ -157,6 +178,8 @@ export interface SmartDataTableProps<T> {
   columns: SmartColumn<T>[]
   data: T[]
   tableId: string
+  /** Preferences adapter — required. Use `createLocalStoragePrefs()` for the default. */
+  prefs: PrefsAPI
   loading?: boolean
   onRowClick?: (row: T) => void
   enablePagination?: boolean
@@ -169,12 +192,16 @@ export interface SmartDataTableProps<T> {
   searchPlaceholder?: string
   emptyTitle?: string
   emptyAction?: { label: string; onClick: () => void }
+  /** @deprecated Card / kanban view modes are out of scope — only 'table' renders. Kept for call-site compatibility. */
   viewModes?: ViewMode[]
   defaultView?: ViewMode
+  /** @deprecated Kanban view is not shipped in this package. */
   kanban?: KanbanConfig
+  /** @deprecated Card / kanban view custom renderer — not used by the table view. */
   renderCard?: (row: T) => ReactNode
-  /** Entity type for SmartCard rendering (e.g. 'bien', 'contact') */
+  /** @deprecated Entity-type metadata system is out of scope for this package. */
   entityType?: string
+  /** @deprecated Kanban view is not shipped in this package. */
   onKanbanMove?: (row: T, fromStatus: string, toStatus: string) => void
   actions?: ReactNode
   onAdd?: () => void
@@ -192,29 +219,29 @@ export interface SmartDataTableProps<T> {
   onTableStateChange?: (state: TableStateSnapshot) => void
   /** When set/changed, restores the table to this state */
   initialTableState?: TableStateSnapshot | null
-  /** Separate data source for card view (e.g. infinite-scrolled full dataset when table is paginated) */
+  /** @deprecated Card view not shipped — separate data source for card view. */
   cardData?: T[]
-  /** Total count for cardData (for display only) */
+  /** @deprecated Card view not shipped. */
   cardTotal?: number
-  /** Called when view mode changes (table/card/kanban) */
+  /** @deprecated Only 'table' is rendered. */
   onViewModeChange?: (mode: ViewMode) => void
-  /** Whether card view has more data to load */
+  /** @deprecated Card view not shipped. */
   cardHasMore?: boolean
-  /** Callback to load more card data */
+  /** @deprecated Card view not shipped. */
   cardLoadMore?: () => void
-  /** Whether card data is currently loading more */
+  /** @deprecated Card view not shipped. */
   cardLoadingMore?: boolean
   /** Called when the table scroll mode changes (pagination vs infinite) */
   onScrollModeChange?: (mode: 'pagination' | 'infinite') => void
   /** Called when sorting changes (for server-side sort with manualPagination) */
   onSortChange?: (sortBy: string | null, sortDir: 'asc' | 'desc' | null) => void
-  /** FilterPanel definitions for external/advanced filters (unified filter system) */
+  /** @deprecated FilterPanel UI is not shipped. Type kept for consumers wiring their own external filters. */
   filterDefs?: FilterDef[]
-  /** Current external filter values */
+  /** @deprecated External filter values — paired with deprecated filterDefs. */
   filterValues?: Record<string, unknown>
-  /** Called when an external filter changes */
+  /** @deprecated External filter onChange — paired with deprecated filterDefs. */
   onFilterChange?: (key: string, value: unknown) => void
-  /** Called when all external filters are reset */
+  /** @deprecated External filter onReset — paired with deprecated filterDefs. */
   onFilterReset?: () => void
   /** Called with debounced search query for server-side search (skips client-side filtering when provided) */
   onGlobalSearch?: (query: string) => void
