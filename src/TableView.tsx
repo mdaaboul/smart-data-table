@@ -84,9 +84,15 @@ export function TableView<T>({
   const skeletonRows = useMemo(() => Array.from({ length: 5 }, (_, i) => i), [])
   const isResizing = table.getState().columnSizingInfo.isResizingColumn
 
-  // ── Fit columns toggle (default OFF so scroll horizontal is enabled — ticket #196) ────
+  // ── Fit columns toggle (default ON so the table always fills its container —
+  // columns are dispatched proportionally across the available width, the
+  // settings cog stays anchored at the right edge, and the user can flip into
+  // horizontal-scroll mode via the cog dropdown if a column needs more room).
+  // Per-column resizes still take precedence: explicit col.getSize() values
+  // come from columnSizing prefs and are honored by the colgroup widths even
+  // when fitColumns is true.
   const [fitColumns, setFitColumns] = useState(
-    () => prefs.get<boolean>(`${tableId}-fit-cols`, false),
+    () => prefs.get<boolean>(`${tableId}-fit-cols`, true),
   )
   const toggleFitColumns = useCallback(() => {
     setFitColumns(prev => {

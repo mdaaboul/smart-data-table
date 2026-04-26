@@ -1,6 +1,6 @@
 {
   "name": "@wavatec/smart-data-table",
-  "version": "0.0.0",
+  "version": "0.0.2",
   "description": "Reusable, headless-ish data table for Wavatec apps. Sort/filter/search, multi-select toolbar, column popup, cell context menu, footer aggregations. i18n-ready.",
   "license": "UNLICENSED",
   "private": false,
