@@ -1,6 +1,6 @@
 {
   "name": "@wavatec/smart-data-table",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Reusable, headless-ish data table for Wavatec apps. Sort/filter/search, multi-select toolbar, column popup, cell context menu, footer aggregations. i18n-ready.",
   "license": "UNLICENSED",
   "private": false,
@@ -27,8 +27,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist",
-    "prepare": "tsup"
+    "clean": "rm -rf dist"
   },
   "peerDependencies": {
     "@tanstack/react-table": ">=8.20.0",
