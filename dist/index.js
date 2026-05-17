@@ -2,7 +2,6 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useReactTable, getPaginationRowModel, getFilteredRowModel, getSortedRowModel, getCoreRowModel, flexRender } from '@tanstack/react-table';
 import { Home, User, ImageIcon, CheckSquare, X, Loader2, Search, Plus, Download, ArrowUp, ArrowDown, Filter, ChevronDown, Settings, Check, Eye, EyeOff, ChevronRight, ChevronUp, ArrowDownToLine, ChevronsLeft, ChevronLeft, ChevronsRight, ArrowUpAZ, ArrowDownAZ, Wrench, RotateCcw, Copy, ClipboardCopy, ExternalLink, AlignLeft, AlignCenter, AlignRight, Paintbrush } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { clsx } from 'clsx';
 import { createPortal } from 'react-dom';
@@ -65,14 +64,16 @@ function exportCSV(data, columns, hiddenCols, filename, opts) {
   const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
   saveAs(blob, `${filename}.csv`);
 }
-function exportExcel(data, columns, hiddenCols, filename, opts) {
+async function exportExcel(data, columns, hiddenCols, filename, opts) {
   const { headers, rows, colWidths } = buildExportData(data, columns, hiddenCols, opts);
-  const wb = XLSX.utils.book_new();
-  const wsData = [headers, ...rows];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws["!cols"] = colWidths.map((w) => ({ wch: w }));
-  XLSX.utils.book_append_sheet(wb, ws, "Data");
-  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const ExcelJS = (await import('exceljs')).default;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Data");
+  ws.addRows([headers, ...rows]);
+  colWidths.forEach((w, i) => {
+    ws.getColumn(i + 1).width = w;
+  });
+  const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   saveAs(blob, `${filename}.xlsx`);
 }

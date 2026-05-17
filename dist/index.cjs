@@ -6,31 +6,10 @@ var react = require('react');
 var reactTable = require('@tanstack/react-table');
 var lucideReact = require('lucide-react');
 var reactI18next = require('react-i18next');
-var XLSX = require('xlsx');
 var fileSaver = require('file-saver');
 var clsx = require('clsx');
 var reactDom = require('react-dom');
 var jsxRuntime = require('react/jsx-runtime');
-
-function _interopNamespace(e) {
-  if (e && e.__esModule) return e;
-  var n = Object.create(null);
-  if (e) {
-    Object.keys(e).forEach(function (k) {
-      if (k !== 'default') {
-        var d = Object.getOwnPropertyDescriptor(e, k);
-        Object.defineProperty(n, k, d.get ? d : {
-          enumerable: true,
-          get: function () { return e[k]; }
-        });
-      }
-    });
-  }
-  n.default = e;
-  return Object.freeze(n);
-}
-
-var XLSX__namespace = /*#__PURE__*/_interopNamespace(XLSX);
 
 // src/SmartDataTable.tsx
 var SWATCH_COLORS = [
@@ -89,14 +68,16 @@ function exportCSV(data, columns, hiddenCols, filename, opts) {
   const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
   fileSaver.saveAs(blob, `${filename}.csv`);
 }
-function exportExcel(data, columns, hiddenCols, filename, opts) {
+async function exportExcel(data, columns, hiddenCols, filename, opts) {
   const { headers, rows, colWidths } = buildExportData(data, columns, hiddenCols, opts);
-  const wb = XLSX__namespace.utils.book_new();
-  const wsData = [headers, ...rows];
-  const ws = XLSX__namespace.utils.aoa_to_sheet(wsData);
-  ws["!cols"] = colWidths.map((w) => ({ wch: w }));
-  XLSX__namespace.utils.book_append_sheet(wb, ws, "Data");
-  const buf = XLSX__namespace.write(wb, { bookType: "xlsx", type: "array" });
+  const ExcelJS = (await import('exceljs')).default;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Data");
+  ws.addRows([headers, ...rows]);
+  colWidths.forEach((w, i) => {
+    ws.getColumn(i + 1).width = w;
+  });
+  const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   fileSaver.saveAs(blob, `${filename}.xlsx`);
 }

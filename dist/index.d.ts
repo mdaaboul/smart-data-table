@@ -285,7 +285,7 @@ declare function exportExcel<T>(data: T[], columns: {
     header: string;
     accessorKey?: string;
     accessorFn?: (row: T) => unknown;
-}[], hiddenCols: Set<string>, filename: string, opts?: ExportOptions): void;
+}[], hiddenCols: Set<string>, filename: string, opts?: ExportOptions): Promise<void>;
 declare const smartFilterFn: FilterFn<unknown>;
 declare function getCellStyle(style: ColumnStyle | undefined): React.CSSProperties;
 declare function formatValue(value: unknown, format?: string): string;

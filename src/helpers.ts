@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import type { FilterFn } from '@tanstack/react-table'
 import type { ColumnStyle, AggFn, SmartColumn, AllSettings } from './types'
@@ -88,7 +87,7 @@ export function exportCSV<T>(
   saveAs(blob, `${filename}.csv`)
 }
 
-export function exportExcel<T>(
+export async function exportExcel<T>(
   data: T[],
   columns: { id: string; header: string; accessorKey?: string; accessorFn?: (row: T) => unknown }[],
   hiddenCols: Set<string>,
@@ -96,12 +95,14 @@ export function exportExcel<T>(
   opts?: ExportOptions,
 ) {
   const { headers, rows, colWidths } = buildExportData(data, columns, hiddenCols, opts)
-  const wb = XLSX.utils.book_new()
-  const wsData = [headers, ...rows]
-  const ws = XLSX.utils.aoa_to_sheet(wsData)
-  ws['!cols'] = colWidths.map(w => ({ wch: w }))
-  XLSX.utils.book_append_sheet(wb, ws, 'Data')
-  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  const ExcelJS = (await import('exceljs')).default
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet('Data')
+  ws.addRows([headers, ...rows])
+  colWidths.forEach((w, i) => {
+    ws.getColumn(i + 1).width = w
+  })
+  const buf = await wb.xlsx.writeBuffer()
   const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   saveAs(blob, `${filename}.xlsx`)
 }
